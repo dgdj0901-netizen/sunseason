@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>계절 상황 카드 – 계절은 왜 변할까?</title>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f6f8;--paper:#fff;--ink:#23282d;--muted:#66707a;--line:#dde3e8;--sun:#f5b301;--hot:#e4572e;--cold:#2f7fd1;--chal:#e69a1d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.6}
+header{text-align:center;padding:26px 16px 4px}
+h1{margin:0 0 4px;font-size:clamp(24px,3.4vw,36px);font-weight:800}
+.sub{margin:0;color:var(--muted);font-size:clamp(14px,1.6vw,17px)}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px 40px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:18px 0 14px}
+.chips button{font:inherit;font-weight:700;width:46px;height:46px;border-radius:50%;border:2px solid #4a545e;background:#fff;color:#4a545e;cursor:pointer;font-size:17px}
+.chips button:disabled{opacity:.28;cursor:not-allowed}
+.chips button.next{box-shadow:0 0 0 4px #ffe08a}
+.chips button.on{background:#4a545e;color:#fff}
+.chips button.chal{border-color:var(--chal);color:#b8760c}
+.chips button.chal.on{background:var(--chal);color:#fff}
+.chips button.dojeon{width:auto;border-radius:999px;padding:0 20px;border-color:var(--chal);background:var(--chal);color:#fff;box-shadow:0 3px 0 #b8760c}
+.stage{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:22px 26px;min-height:420px}
+.empty{text-align:center;color:var(--muted);padding:90px 10px;font-size:19px}
+.empty button{margin-top:18px}
+.head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.num{width:54px;height:54px;border-radius:50%;background:#4a545e;color:#fff;font-weight:800;font-size:24px;display:grid;place-items:center;flex:0 0 auto}
+.stage.chal .num{background:var(--chal)}
+.title{font-size:clamp(22px,2.8vw,30px);font-weight:800;line-height:1.3;word-break:keep-all}
+.tag{display:inline-block;background:var(--chal);color:#fff;border-radius:999px;padding:2px 12px;font-size:13px;font-weight:700;margin-bottom:6px}
+.say{font-family:"Gowun Dodum","Noto Sans KR",sans-serif;font-size:clamp(18px,2.1vw,22px);background:#f8fafb;border:1.5px solid var(--line);border-radius:14px;padding:12px 16px;margin:10px 0 14px}
+.cols{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
+.fig{background:#fbfcfd;border:1px solid var(--line);border-radius:16px;padding:10px}
+.fig svg{width:100%;height:auto;display:block}
+.data{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.data h3{margin:0;background:#4a545e;color:#fff;font-size:15px;padding:8px 12px}
+.stage.chal .data h3{background:var(--chal)}
+.data table{width:100%;border-collapse:collapse;font-size:16px}
+.data td{padding:9px 12px;border-top:1px solid var(--line)}
+.data td:last-child{text-align:right;font-weight:700;white-space:nowrap}
+.note{font-size:12.5px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--line);background:#fafbfc}
+.nav{display:flex;justify-content:space-between;margin-top:16px;gap:10px}
+.btn{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 20px;cursor:pointer;font-size:16px;background:#4a545e;color:#fff}
+.btn.ghost{background:#fff;color:#4a545e;border:1.5px solid #4a545e}
+.btn:disabled{opacity:.3;cursor:not-allowed}
+.btn.chalb{background:var(--chal);box-shadow:0 3px 0 #b8760c}
+footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:24px}
+.hidden{display:none!important}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>왜 여름은 덥고, 겨울은 추울까?</h1>
+  <p class="sub">상황 카드를 1번부터 차례대로 열어 보고, 카드마다 기온이 달라지는 까닭을 한 낱말로 써 보세요.</p>
+</header>
+<div class="wrap">
+  <div class="chips" id="chips"></div>
+  <div class="stage" id="stage"></div>
+  <footer>남중 고도·낮의 길이·해 뜨고 지는 시각은 서울 기준 어림값, 평균 기온은 서울·시드니 평년값(1991~2020년)을 어림한 값입니다. 측정 자료 그래프는 수업용 예시입니다.</footer>
+</div>
+
+<script>
+/* ---------- 그림 도우미 ---------- */
+const SUN=(x,y,r=22)=>`<g><circle cx="${x}" cy="${y}" r="${r}" fill="#f5b301"/>${[...Array(8)].map((_,i)=>{const a=i*Math.PI/4;return `<line x1="${x+Math.cos(a)*(r+6)}" y1="${y+Math.sin(a)*(r+6)}" x2="${x+Math.cos(a)*(r+15)}" y2="${y+Math.sin(a)*(r+15)}" stroke="#f5b301" stroke-width="4" stroke-linecap="round"/>`}).join('')}</g>`;
+const KID=(x,g,coat)=>`<g><circle cx="${x}" cy="${g-92}" r="14" fill="#f2c9a5"/><path d="M${x-14} ${g-96} Q${x} ${g-118} ${x+14} ${g-96} Q${x+8} ${g-104} ${x} ${g-102} Q${x-8} ${g-104} ${x-14} ${g-96}Z" fill="#3a2a1d"/><rect x="${x-13}" y="${g-77}" width="26" height="40" rx="9" fill="${coat}"/><rect x="${x-11}" y="${g-40}" width="9" height="40" rx="4" fill="#3c4c66"/><rect x="${x+2}" y="${g-40}" width="9" height="40" rx="4" fill="#3c4c66"/></g>`;
+
+function shadowFig(alt,season){
+  const W=520,H=300,g=250,x=150,h=118;
+  const rad=alt*Math.PI/180, L=Math.min(h/Math.tan(rad),340);
+  const sx=x-Math.cos(rad)*230, sy=g-Math.sin(rad)*230;   // 해는 왼쪽 위
+  const sunX=Math.max(40,Math.min(sx,W-40)), sunY=Math.max(36,sy);
+  const sky=season==='summer'?'#cfe9ff':'#e3eaf2', coat=season==='summer'?'#f28c38':'#4f6fa8';
+  return `<svg viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${g}" fill="${sky}"/><rect y="${g}" width="${W}" height="${H-g}" fill="#d9c9a3"/>
+  <line x1="${sunX}" y1="${sunY}" x2="${x+L}" y2="${g}" stroke="#f5b301" stroke-width="2" stroke-dasharray="6 6"/>
+  <path d="M${x} ${g} L${x+L} ${g} L${x+L} ${g+10} L${x} ${g+10}Z" fill="rgba(40,40,40,.45)"/>
+  ${KID(x,g,coat)}${SUN(sunX,sunY)}
+  <path d="M${x+L-60} ${g} A60 60 0 0 0 ${x+L-60*Math.cos(rad)} ${g-60*Math.sin(rad)}" fill="none" stroke="#c0392b" stroke-width="3"/>
+  <text x="${x+L-78}" y="${g-14}" font-size="20" font-weight="700" fill="#c0392b" text-anchor="end">약 ${alt}°</text>
+  <text x="${x+L/2}" y="${g+38}" font-size="18" text-anchor="middle" fill="#3b3b3b">그림자 길이</text></svg>`;
+}
+function hhmm(t){const h=Math.floor(t),m=Math.round((t-h)*60);return `${h}:${String(m).padStart(2,'0')}`}
+function dayFig(rise,set,now,label){
+  const W=520,H=300, X=t=>30+t/24*460;
+  const light = now>rise+0.4 && now<set-0.4; const dusk=!light && (Math.abs(now-set)<0.8||Math.abs(now-rise)<0.8);
+  const sky=light?'#bfe3ff':dusk?'#6d6fa8':'#27304d';
+  const ang=(now%12)/12*2*Math.PI, mang=((now%1)*60)/60*2*Math.PI, cx=380,cy=105;
+  return `<svg viewBox="0 0 ${W} ${H}"><rect x="0" y="0" width="${W}" height="190" rx="14" fill="${sky}"/>
+  ${light?SUN(110,70,20):`<circle cx="110" cy="70" r="20" fill="#f4f1d0"/><circle cx="120" cy="64" r="18" fill="${sky}"/>`}
+  <rect x="40" y="130" width="60" height="60" fill="#8a6a4f"/><polygon points="34,132 70,102 106,132" fill="#b24a3b"/><rect x="62" y="150" width="16" height="22" fill="${light?'#ffe9a8':'#ffd45c'}"/>
+  <rect x="150" y="150" width="80" height="40" fill="#6e7e8f"/><rect x="236" y="120" width="56" height="70" fill="#7f8fa0"/>
+  <circle cx="${cx}" cy="${cy}" r="58" fill="#fff" stroke="#4a545e" stroke-width="5"/>
+  ${[...Array(12)].map((_,i)=>{const a=i/12*2*Math.PI;return `<line x1="${cx+Math.sin(a)*48}" y1="${cy-Math.cos(a)*48}" x2="${cx+Math.sin(a)*54}" y2="${cy-Math.cos(a)*54}" stroke="#4a545e" stroke-width="3"/>`}).join('')}
+  <line x1="${cx}" y1="${cy}" x2="${cx+Math.sin(ang)*30}" y2="${cy-Math.cos(ang)*30}" stroke="#23282d" stroke-width="6" stroke-linecap="round"/>
+  <line x1="${cx}" y1="${cy}" x2="${cx+Math.sin(mang)*45}" y2="${cy-Math.cos(mang)*45}" stroke="#23282d" stroke-width="4" stroke-linecap="round"/>
+  <text x="${cx}" y="${cy+82}" text-anchor="middle" font-size="18" font-weight="700" fill="#fff">${now<12?'오전':'오후'} ${hhmm(now>12?now-12:now)}</text>
+  <text x="30" y="222" font-size="15" fill="#4a545e" font-weight="700">${label} 하루 24시간 중 해가 떠 있는 시간</text>
+  <rect x="${X(0)}" y="234" width="460" height="28" rx="6" fill="#2d3550"/>
+  <rect x="${X(rise)}" y="234" width="${X(set)-X(rise)}" height="28" fill="#f5c64a"/>
+  <line x1="${X(now)}" y1="228" x2="${X(now)}" y2="268" stroke="#e4572e" stroke-width="3"/>
+  ${[0,6,12,18,24].map(t=>`<text x="${X(t)}" y="288" font-size="13" text-anchor="middle" fill="#66707a">${t}시</text>`).join('')}
+  </svg>`;
+}
+function compareFig(alt,dayH,temp,month){
+  const W=520,H=300, hot=temp>10;
+  const rad=alt*Math.PI/180;
+  const tH=Math.max(8,(temp+10)/40*170);
+  return `<svg viewBox="0 0 ${W} ${H}">
+  <text x="90" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#4a545e">태양 남중 고도</text>
+  <line x1="20" y1="200" x2="170" y2="200" stroke="#8a7a5a" stroke-width="4"/>
+  <line x1="40" y1="200" x2="${40+Math.cos(rad)*130}" y2="${200-Math.sin(rad)*130}" stroke="#f5b301" stroke-width="3" stroke-dasharray="6 5"/>
+  ${SUN(40+Math.cos(rad)*140,200-Math.sin(rad)*140,16)}
+  <path d="M80 200 A40 40 0 0 0 ${40+40*Math.cos(rad)} ${200-40*Math.sin(rad)}" fill="none" stroke="#c0392b" stroke-width="3"/>
+  <text x="95" y="235" text-anchor="middle" font-size="22" font-weight="800" fill="#c0392b">약 ${alt}°</text>
+  <text x="275" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#4a545e">낮의 길이</text>
+  <rect x="255" y="40" width="40" height="190" rx="8" fill="#2d3550"/>
+  <rect x="255" y="${40+190*(1-dayH/24)}" width="40" height="${190*dayH/24}" rx="8" fill="#f5c64a"/>
+  <text x="275" y="258" text-anchor="middle" font-size="20" font-weight="800" fill="#23282d">약 ${Math.floor(dayH)}시간${dayH%1?' '+Math.round(dayH%1*60)+'분':''}</text>
+  <text x="430" y="26" text-anchor="middle" font-size="16" font-weight="700" fill="#4a545e">${month} 평균 기온</text>
+  <rect x="418" y="40" width="24" height="180" rx="12" fill="#eef1f4" stroke="#9aa5b1" stroke-width="2"/>
+  <rect x="422" y="${220-tH}" width="16" height="${tH}" rx="8" fill="${hot?'#e4572e':'#2f7fd1'}"/>
+  <circle cx="430" cy="232" r="20" fill="${hot?'#e4572e':'#2f7fd1'}"/>
+  <text x="430" y="285" text-anchor="middle" font-size="22" font-weight="800" fill="${hot?'#e4572e':'#2f7fd1'}">약 ${temp}°C</text>
+  </svg>`;
+}
+function lineFig(){
+  const W=520,H=300, t=[9.5,10.5,11.5,12.5,13.5,14.5,15.5], alt=[41,51,58,60,57,50,40], tmp=[18,20,22,23.5,24.5,25,24.3];
+  const X=i=>60+i*70, YA=v=>250-(v-30)/35*200, YT=v=>250-(v-16)/10*200;
+  const pa=alt.map((v,i)=>`${X(i)},${YA(v)}`).join(' '), pt=tmp.map((v,i)=>`${X(i)},${YT(v)}`).join(' ');
+  return `<svg viewBox="0 0 ${W} ${H}"><rect x="50" y="40" width="440" height="215" fill="#fff" stroke="#dde3e8"/>
+  ${t.map((v,i)=>`<text x="${X(i)}" y="275" text-anchor="middle" font-size="13" fill="#66707a">${hhmm(v)}</text>`).join('')}
+  <polyline points="${pa}" fill="none" stroke="#f5b301" stroke-width="4"/>${alt.map((v,i)=>`<circle cx="${X(i)}" cy="${YA(v)}" r="5" fill="#f5b301"/>`).join('')}
+  <polyline points="${pt}" fill="none" stroke="#e4572e" stroke-width="4"/>${tmp.map((v,i)=>`<rect x="${X(i)-5}" y="${YT(v)-5}" width="10" height="10" fill="#e4572e"/>`).join('')}
+  <circle cx="70" cy="22" r="6" fill="#f5b301"/><text x="82" y="27" font-size="15" fill="#23282d">태양 고도</text>
+  <rect x="190" y="16" width="12" height="12" fill="#e4572e"/><text x="208" y="27" font-size="15" fill="#23282d">기온</text>
+  <text x="${X(3)}" y="${YA(60)-12}" text-anchor="middle" font-size="13" fill="#b07d00">가장 높음</text>
+  <text x="${X(5)}" y="${YT(25)-12}" text-anchor="middle" font-size="13" fill="#c0392b">가장 높음</text>
+  </svg>`;
+}
+function lampFig(vertical){
+  const W=520,H=300;
+  const lamp = vertical?`<g><rect x="230" y="20" width="60" height="26" rx="6" fill="#4a545e"/><polygon points="236,46 284,46 300,70 220,70" fill="#6b7682"/></g>
+     <polygon points="222,70 298,70 320,220 200,220" fill="rgba(255,214,79,.55)"/>`
+   :`<g transform="rotate(-50 120 80)"><rect x="90" y="54" width="60" height="26" rx="6" fill="#4a545e"/><polygon points="96,80 144,80 160,104 80,104" fill="#6b7682"/></g>
+     <polygon points="150,104 196,70 470,220 190,220" fill="rgba(255,214,79,.40)"/>`;
+  const spread = vertical?'좁은 곳에 빛이 모여요':'넓은 곳에 빛이 퍼져요';
+  return `<svg viewBox="0 0 ${W} ${H}">${lamp}
+  <rect x="60" y="220" width="420" height="40" rx="6" fill="#e2c88f"/><rect x="60" y="220" width="420" height="40" rx="6" fill="none" stroke="#b79a5f"/>
+  <rect x="${vertical?254:300}" y="150" width="10" height="80" rx="5" fill="#fff" stroke="#9aa5b1" stroke-width="2"/><circle cx="${vertical?259:305}" cy="232" r="9" fill="#e4572e"/>
+  <rect x="${vertical?256:302}" y="${vertical?175:200}" width="6" height="${vertical?55:30}" fill="#e4572e"/>
+  <text x="270" y="290" text-anchor="middle" font-size="18" font-weight="700" fill="#4a545e">전등을 ${vertical?'똑바로(수직으로)':'비스듬히'} 비춤 · ${spread}</text></svg>`;
+}
+function orbitFig(){
+  const W=520,H=300,cx=260,cy=150;
+  return `<svg viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" rx="14" fill="#1f2640"/>
+  ${[...Array(30)].map((_,i)=>`<circle cx="${(i*97)%W}" cy="${(i*53)%H}" r="1.4" fill="#fff" opacity=".6"/>`).join('')}
+  <ellipse cx="${cx}" cy="${cy}" rx="200" ry="105" fill="none" stroke="#8fa3c8" stroke-width="2" stroke-dasharray="6 6"/>
+  ${SUN(cx-30,cy,30)}
+  <circle cx="${cx-200}" cy="${cy}" r="16" fill="#3d8bd9"/><path d="M${cx-208} ${cy-6} q6 -4 12 2 q-4 8 -12 4Z" fill="#59b36a"/>
+  <text x="${cx-216}" y="${cy-30}" text-anchor="start" font-size="16" fill="#fff" font-weight="700">1월 초</text><text x="${cx-216}" y="${cy+42}" text-anchor="start" font-size="14" fill="#c6d0e4">가장 가까움</text>
+  <circle cx="${cx+200}" cy="${cy}" r="16" fill="#3d8bd9"/><path d="M${cx+192} ${cy-6} q6 -4 12 2 q-4 8 -12 4Z" fill="#59b36a"/>
+  <text x="${cx+216}" y="${cy-30}" text-anchor="end" font-size="16" fill="#fff" font-weight="700">7월 초</text><text x="${cx+216}" y="${cy+42}" text-anchor="end" font-size="14" fill="#c6d0e4">가장 멂</text>
+  <text x="${cx}" y="285" text-anchor="middle" font-size="13" fill="#c6d0e4">※ 실제 궤도는 거의 원에 가까워요. 차이를 보이려고 과장해서 그렸어요.</text></svg>`;
+}
+function globeFig(){
+  const W=520,H=300;
+  return `<svg viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" rx="14" fill="#eef4fa"/>
+  ${SUN(60,150,30)}
+  <line x1="100" y1="110" x2="200" y2="110" stroke="#f5b301" stroke-width="3"/><line x1="100" y1="150" x2="200" y2="150" stroke="#f5b301" stroke-width="3"/><line x1="100" y1="190" x2="200" y2="190" stroke="#f5b301" stroke-width="3"/>
+  <g transform="rotate(23.5 300 150)"><circle cx="300" cy="150" r="90" fill="#3d8bd9"/><line x1="300" y1="45" x2="300" y2="255" stroke="#23282d" stroke-width="3"/><line x1="210" y1="150" x2="390" y2="150" stroke="#fff" stroke-dasharray="5 5"/></g>
+  <circle cx="318" cy="98" r="8" fill="#e4572e"/><text x="330" y="88" font-size="16" font-weight="700" fill="#23282d">서울</text>
+  <circle cx="300" cy="212" r="8" fill="#e4572e"/><text x="312" y="232" font-size="16" font-weight="700" fill="#23282d">시드니</text>
+  <text x="430" y="40" text-anchor="middle" font-size="15" font-weight="700" fill="#4a545e">1월의 지구</text>
+  <text x="430" y="62" text-anchor="middle" font-size="13" fill="#66707a">자전축이 기울어져 있어요</text>
+  <text x="300" y="290" text-anchor="middle" font-size="13" fill="#66707a">※ 크기와 거리는 실제와 달라요.</text></svg>`;
+}
+
+/* ---------- 카드 ---------- */
+const CARDS=[
+ {n:1,title:'한여름 낮 12시, 내 그림자가 아주 짧아요',say:'7월 점심시간에 운동장에 나갔더니 내 그림자가 발밑에 아주 짧게 생겼어요. 햇볕이 머리 위에서 뜨겁게 내리쬐었어요.',
+  fig:()=>shadowFig(76,'summer'),data:[['하지(6월 21일 무렵) 낮 12시 30분쯤 태양 고도','약 76°'],['키 150cm 어린이의 그림자 길이','약 40cm']],note:'서울 기준 어림값'},
+ {n:2,title:'6월 하지, 저녁 7시 반에도 밖이 환해요',say:'하지 날 저녁을 먹고 7시 반에 놀이터에 나갔는데도 아직 환했어요. 해가 정말 늦게 졌어요.',
+  fig:()=>dayFig(5.18,19.95,19.5,'하지'),data:[['해 뜨는 시각','약 오전 5시 11분'],['해 지는 시각','약 오후 7시 57분'],['낮의 길이','약 14시간 46분']],note:'서울, 하지(6월 21일 무렵) 기준 어림값'},
+ {n:3,title:'서울의 7월: 해가 높이 뜨고, 해 떠 있는 시간도 길어요',say:'7월에는 한낮에 해가 하늘 높이 떠 있고, 아침 일찍 떠서 저녁 늦게 져요. 일 년 중 가장 더운 달 가운데 하나예요.',
+  fig:()=>compareFig(74,14.5,26,'7월'),data:[['7월 중순 태양 남중 고도','약 74°'],['7월 중순 낮의 길이','약 14시간 30분'],['7월 평균 기온','약 26°C']],note:'서울 기준 어림값, 기온은 평년값'},
+ {n:4,title:'태양이 높이 떠 있는 한낮이 아침보다 더워요',say:'과학 시간에 하루 동안 태양 고도와 기온을 쟀어요. 아침보다 태양이 높이 뜬 한낮이 더 따뜻했어요.',
+  fig:()=>lineFig(),data:[['태양 고도가 가장 높은 때','낮 12시 30분쯤'],['기온이 가장 높은 때','오후 2시 30분쯤']],note:'수업용 예시 측정 자료(맑은 날 운동장)'},
+ {n:5,title:'전등을 똑바로(수직으로) 비춘 모래가 빨리 데워져요',say:'모래에 전등을 똑바로 세워 비추었더니, 빛이 좁은 곳에 모여서 온도계 눈금이 빨리 올라갔어요.',
+  fig:()=>lampFig(true),data:[['처음 모래 온도','20°C'],['5분 뒤','24°C'],['10분 뒤','28°C']],note:'수업용 예시 실험 자료'},
+ {n:6,title:'한겨울 낮 12시, 내 그림자가 아주 길어요',say:'1월 점심시간에 운동장에 나갔더니 해가 낮게 떠 있어서 내 그림자가 내 키보다 훨씬 길게 늘어졌어요.',
+  fig:()=>shadowFig(29,'winter'),data:[['동지(12월 22일 무렵) 낮 12시 30분쯤 태양 고도','약 29°'],['키 150cm 어린이의 그림자 길이','약 270cm']],note:'서울 기준 어림값'},
+ {n:7,title:'12월 동지, 오후 5시 반쯤이면 어둑어둑해요',say:'동지 날 학원 끝나고 나왔더니 오후 5시 반인데 벌써 어두워지고 있었어요. 해가 너무 일찍 졌어요.',
+  fig:()=>dayFig(7.72,17.28,17.5,'동지'),data:[['해 뜨는 시각','약 오전 7시 43분'],['해 지는 시각','약 오후 5시 17분'],['낮의 길이','약 9시간 34분']],note:'서울, 동지(12월 22일 무렵) 기준 어림값'},
+ {n:8,title:'서울의 1월: 해가 낮게 뜨고, 해 떠 있는 시간도 짧아요',say:'1월에는 한낮에도 해가 낮게 떠 있고, 늦게 떠서 일찍 져요. 일 년 중 가장 추운 달이에요.',
+  fig:()=>compareFig(31,9.8,-2,'1월'),data:[['1월 중순 태양 남중 고도','약 31°'],['1월 중순 낮의 길이','약 9시간 50분'],['1월 평균 기온','약 -2°C']],note:'서울 기준 어림값, 기온은 평년값'},
+ {n:9,title:'전등을 비스듬히 비춘 모래는 천천히 데워져요',say:'이번에는 전등을 비스듬히 기울여 비추었더니, 빛이 넓게 퍼져서 온도계 눈금이 천천히 올라갔어요.',
+  fig:()=>lampFig(false),data:[['처음 모래 온도','20°C'],['5분 뒤','22°C'],['10분 뒤','24°C']],note:'수업용 예시 실험 자료'},
+ {n:10,title:'겨울에는 아침 7시 반에도 아직 어둑해요',say:'겨울방학 전 등굣길, 아침 7시 반에 집을 나섰는데 아직 하늘이 어둑했어요. 해가 늦게 떴어요.',
+  fig:()=>dayFig(7.72,17.28,7.5,'동지'),data:[['해 뜨는 시각','약 오전 7시 43분'],['해 지는 시각','약 오후 5시 17분'],['낮의 길이','약 9시간 34분']],note:'서울, 동지(12월 22일 무렵) 기준 어림값'},
+ {n:11,chal:true,title:'지구는 1월 초에 태양과 가장 가깝고, 7월 초에 가장 멀어요',say:'"여름에는 지구가 태양과 가까워서 덥다"고 생각했는데, 사실 지구는 1월 초에 태양과 가장 가까워요. 그런데 서울의 1월은 가장 추운 달이에요!',
+  fig:()=>orbitFig(),data:[['1월 초 지구–태양 거리','약 1억 4,700만 km'],['7월 초 지구–태양 거리','약 1억 5,200만 km'],['서울 1월 평균 기온','약 -2°C'],['서울 7월 평균 기온','약 26°C']],note:'거리 차이는 약 3%로 아주 작아요'},
+ {n:12,chal:true,title:'같은 1월, 호주 시드니는 한여름이에요',say:'1월에 호주 시드니에 사는 친구에게 영상 통화를 했더니, 친구는 반소매를 입고 바닷가에 있었어요. 우리는 패딩을 입고 있는데 말이에요!',
+  fig:()=>globeFig(),data:[['서울 1월 평균 기온','약 -2°C'],['시드니 1월 평균 기온','약 23°C'],['같은 날, 지구–태양 거리','같아요']],note:'서울은 북반구, 시드니는 남반구에 있어요'}
+];
+const BASE=CARDS.filter(c=>!c.chal);
+let seen=0, cur=0, showChal=false;   // seen: 지금까지 열어 본 가장 큰 번호
+
+function visible(){ return showChal?CARDS:BASE; }
+function drawChips(){
+  const el=document.getElementById('chips'); el.innerHTML='';
+  visible().forEach(c=>{
+    const b=document.createElement('button'); b.textContent=c.n;
+    const open = c.n<=seen+1;
+    b.disabled=!open;
+    b.className=(c.chal?'chal':'')+(cur===c.n?' on':'')+(c.n===seen+1&&cur!==c.n?' next':'');
+    b.title=open?c.title:'앞 카드를 먼저 열어 보세요';
+    b.onclick=()=>show(c.n); el.appendChild(b);
+  });
+  if(!showChal){
+    const d=document.createElement('button'); d.textContent='도전!'; d.className='dojeon';
+    d.onclick=()=>{showChal=true; drawChips(); if(cur) show(cur);}; el.appendChild(d);
+  }
+}
+function show(n){
+  const c=CARDS.find(x=>x.n===n); if(!c) return;
+  if(n>seen+1) return;
+  cur=n; seen=Math.max(seen,n);
+  const st=document.getElementById('stage'); st.className='stage'+(c.chal?' chal':'');
+  const v=visible(), i=v.findIndex(x=>x.n===n), last=i===v.length-1;
+  st.innerHTML=(c.chal?'<span class="tag">도전 카드</span>':'')+
+   `<div class="head"><div class="num">${c.n}</div><div class="title">${c.title}</div></div>`+
+   `<div class="say">${c.say}</div>`+
+   `<div class="cols"><div class="fig">${c.fig()}</div><div class="data"><h3>자료</h3><table>${c.data.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</table><div class="note">${c.note}</div></div></div>`+
+   `<div class="nav"><button class="btn ghost" id="prevB" ${i===0?'disabled':''}>◀ 이전 카드</button>`+
+   `<button class="btn" id="nextB" ${last?'disabled':''}>다음 카드 ▶</button></div>`;
+  const pb=document.getElementById('prevB'); if(pb) pb.onclick=()=>show(v[i-1].n);
+  const nb=document.getElementById('nextB'); if(nb) nb.onclick=()=>show(v[i+1].n);
+  drawChips();
+}
+function start(){
+  const st=document.getElementById('stage'); st.className='stage';
+  st.innerHTML=`<div class="empty">1번 카드부터 차례대로 열어 보세요.<br>한 번에 한 장씩만 보여요.<br><button class="btn" id="go">1번 카드 열기 ▶</button></div>`;
+  document.getElementById('go').onclick=()=>show(1);
+  drawChips();
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){const b=document.getElementById('nextB')||document.getElementById('go'); if(b&&!b.disabled) b.click();}
+  if(e.key==='ArrowLeft'){const b=document.getElementById('prevB'); if(b&&!b.disabled) b.click();}
+});
+start();
+</script>
+</body>
+</html>
